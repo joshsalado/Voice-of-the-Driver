@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice of a Driver — Leadership Dashboard</title>
+<title>Voice of the Driver — Leadership Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
   :root { --navy:#232F3E; --orange:#FF9900; --blue:#0073BB; --bg:#F4F6F8; --card:#fff; --text:#1A1A1A; --muted:#6B7280; --border:#E3E8EE; --green:#067D62; --green-l:#E8F5E9; --warn:#D4760A; --warn-l:#FFF8E1; --err:#C7511F; --err-l:#FDECEA; }
@@ -51,7 +51,7 @@
   .bar-label{font-size:12px;font-weight:600;color:var(--text);width:230px;text-align:right;flex-shrink:0;}
   .bar-track{flex:1;height:26px;background:#F0F2F5;border-radius:7px;overflow:hidden;position:relative;}
   .bar-fill{height:100%;border-radius:7px;transition:width .5s;}
-  .bar-val{position:absolute;top:4px;font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+  .bar-val{position:absolute;top:4px;font-size:12px;font-weight:800;color:var(--navy);}
 
   /* Feedback feed */
   .fb-item{background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--blue);}
@@ -88,6 +88,13 @@
   .qtab{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;background:#EBF3FA;border:1px solid var(--border);transition:all .15s;}
   .qtab:hover{background:#D6E6F2;}
   .qtab.on{background:var(--navy);color:#fff;font-weight:800;border-color:var(--navy);}
+
+  .wk-select{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .wk-select .wk-lbl{font-size:12px;font-weight:700;color:var(--navy);margin-right:2px;}
+  .wk-bubble{padding:5px 13px;border:1px solid var(--border);border-radius:16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;background:#fff;transition:all .15s;}
+  .wk-bubble:hover{border-color:var(--orange);}
+  .wk-bubble.on{background:var(--orange);border-color:var(--orange);color:var(--navy);font-weight:800;}
+  .wk-bubble .wk-count{opacity:.7;font-size:10px;margin-left:2px;}
 </style>
 </head>
 <body>
@@ -97,7 +104,7 @@
       <div class="hdr-left">
         <span class="hdr-badge"><i class="fa-solid fa-truck"></i> DPX7</span>
         <div>
-          <h1>Voice of a Driver</h1>
+          <h1>Voice of the Driver</h1>
           <div class="sub" id="statusLine">Leadership Dashboard</div>
         </div>
       </div>
@@ -114,6 +121,8 @@
       <div class="tab" data-period="month">This Month</div>
       <div class="tab" data-period="all">All Time</div>
     </div>
+
+    <div class="wk-select" id="wkSelect"></div>
 
     
     <div class="dsp-strip"><span class="dsp-strip-label"><i class="fa-solid fa-people-group"></i> Our DPX7 Delivery Teams:</span><div class="dsp-chip"><div class="dsp-chip-bubble"><svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
@@ -226,7 +235,7 @@
   <div class="overlay" id="qrOverlay" onclick="if(event.target===this)closeQR()">
     <div class="modal">
       <h3><i class="fa-solid fa-qrcode" style="color:var(--orange);"></i> Scan to Give Feedback</h3>
-      <p>Drivers scan this code to open the Voice of a Driver survey</p>
+      <p>Drivers scan this code to open the Voice of the Driver survey</p>
       <div class="qr-box" id="qrBox"></div>
       <div class="link" id="surveyLink"></div>
       <button class="close-btn" onclick="closeQR()">Close</button>
@@ -240,6 +249,7 @@ var SURVEY_URL = "https://joshsalado.github.io/Voice-of-the-Driver/";
 
 var currentPeriod = 'week';
 var currentQ = 'all';
+var selectedWeeks = []; // empty = all weeks
 var cachedResponses = [];
 var cachedQuestions = [];
 
@@ -276,9 +286,58 @@ function fetchAll(cb){
   }).catch(chk);
 }
 
+function getWeekNum(d){
+  var dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var dayNum = (dt.getUTCDay() + 6) % 7;
+  dt.setUTCDate(dt.getUTCDate() - dayNum + 3);
+  var firstThu = new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+  var firstDayNum = (firstThu.getUTCDay() + 6) % 7;
+  firstThu.setUTCDate(firstThu.getUTCDate() - firstDayNum + 3);
+  return 1 + Math.round((dt - firstThu) / (7*24*3600*1000));
+}
+
+function buildWeekBubbles(){
+  var el = document.getElementById('wkSelect');
+  if(!el) return;
+  // Count responses per week
+  var counts = {};
+  cachedResponses.forEach(function(r){
+    var w = 'Wk ' + getWeekNum(r.ts);
+    counts[w] = (counts[w]||0) + 1;
+  });
+  var weeks = Object.keys(counts).sort(function(a,b){
+    return (parseInt(a.replace(/[^0-9]/g,''))||0) - (parseInt(b.replace(/[^0-9]/g,''))||0);
+  });
+  el.innerHTML = '';
+  var lbl = document.createElement('span'); lbl.className='wk-lbl'; lbl.textContent='Select Week(s):';
+  el.appendChild(lbl);
+  // "All" bubble
+  var allB = document.createElement('span');
+  allB.className = 'wk-bubble' + (selectedWeeks.length===0?' on':'');
+  allB.textContent = 'All';
+  allB.addEventListener('click', function(){ selectedWeeks = []; buildWeekBubbles(); render(); });
+  el.appendChild(allB);
+  weeks.forEach(function(w){
+    var b = document.createElement('span');
+    var on = selectedWeeks.indexOf(w) > -1;
+    b.className = 'wk-bubble' + (on?' on':'');
+    b.innerHTML = w + ' <span class="wk-count">(' + counts[w] + ')</span>';
+    b.addEventListener('click', function(){
+      var i = selectedWeeks.indexOf(w);
+      if(i>-1) selectedWeeks.splice(i,1); else selectedWeeks.push(w);
+      buildWeekBubbles(); render();
+    });
+    el.appendChild(b);
+  });
+}
+
 function getFiltered(){
   var now = new Date();
   return cachedResponses.filter(function(r){
+    // Week bubble filter (multi-select). If any weeks chosen, must match one.
+    if(selectedWeeks.length){
+      if(selectedWeeks.indexOf('Wk ' + getWeekNum(r.ts)) === -1) return false;
+    }
     if(currentPeriod==='all') return true;
     if(currentPeriod==='week'){
       var wk = new Date(now); wk.setDate(now.getDate()-7);
@@ -293,6 +352,7 @@ function getFiltered(){
 }
 
 function render(){
+  buildWeekBubbles();
   var filtered = getFiltered();
 
   // Status line
