@@ -52,7 +52,7 @@
   .btn-feedback i{color:var(--orange);}
   .btn-inner{display:flex;flex-direction:column;align-items:flex-start;text-align:left;}
 
-  .anon{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .anon{text-align:center;font-size:15px;font-weight:700;color:var(--navy);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
 
   /* Question / feedback views */
   .view{display:none;}
@@ -138,6 +138,13 @@
   .info-panel{margin-bottom:16px;}
 
   .dsp-wall .info-head{justify-content:center;}
+
+  .pill-scale{display:flex;gap:7px;}
+  .pill-btn{flex:1;text-align:center;padding:11px 3px;border-radius:10px;color:#fff;cursor:pointer;border:3px solid transparent;transition:transform .1s,box-shadow .1s;}
+  .pill-btn .pill-num{display:block;font-size:17px;font-weight:800;line-height:1;}
+  .pill-btn .pill-lbl{display:block;font-size:9.5px;font-weight:600;margin-top:5px;line-height:1.2;}
+  .pill-btn:hover{transform:translateY(-2px);}
+  .pill-btn.sel{border-color:var(--navy);box-shadow:0 3px 10px rgba(0,0,0,.25);transform:translateY(-2px);}
 </style>
 </head>
 <body>
@@ -270,7 +277,7 @@
           <span class="btn-inner"><span>Something on Your Mind?</span><span class="sub">Share any idea, concern, or shout-out</span></span>
         </button>
       </div>
-      <div class="anon"><i class="fa-solid fa-lock"></i> 100% anonymous — we can't see who you are</div>
+      <div class="anon"><i class="fa-solid fa-lock" style="font-size:16px;color:var(--orange);"></i> 100% anonymous — we can't see who you are</div>
     </div>
 
     <!-- ============ CHECK-IN ============ -->
@@ -328,12 +335,34 @@ var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4qEo7l7fpfdiyJPJ0qIj
 
 var questions = [];
 var ratings = {};
-var scaleOptions = [
-  { v:1, emoji:'\uD83D\uDE1E', lbl:'Poor' },
-  { v:2, emoji:'\uD83D\uDE10', lbl:'Fair' },
-  { v:3, emoji:'\uD83D\uDE42', lbl:'Good' },
-  { v:4, emoji:'\uD83D\uDE04', lbl:'Great' }
-];
+// Color-pill scale SETS with per-question wording. Colors consistent (red->green); labels change.
+var scaleSets = {
+  station: [
+    { v:1, lbl:"Nope, missing the mark" },
+    { v:2, lbl:"Ehhh, so-so" },
+    { v:3, lbl:"Pretty good, getting there" },
+    { v:4, lbl:"Heck yeah, nailed it! \uD83D\uDE4C" }
+  ],
+  tech: [
+    { v:1, lbl:"Not workin' for me" },
+    { v:2, lbl:"Kinda glitchy" },
+    { v:3, lbl:"Mostly fine" },
+    { v:4, lbl:"Works great!" }
+  ],
+  safety: [
+    { v:1, lbl:"Not really" },
+    { v:2, lbl:"Could be better" },
+    { v:3, lbl:"Mostly good" },
+    { v:4, lbl:"Totally set \uD83D\uDCAA" }
+  ]
+};
+var pillColors = { 1:'#C7511F', 2:'#E88B00', 3:'#5B9A4A', 4:'#067D62' };
+function scaleForQuestion(qText){
+  var t = (qText||'').toLowerCase();
+  if (/(app|navigat|tech|gps|device|scan)/.test(t)) return scaleSets.tech;
+  if (/(safe|prepar|dog|secur|hazard)/.test(t)) return scaleSets.safety;
+  return scaleSets.station;
+}
 
 function escapeHTML(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function isActive(v){ if(v===undefined||v===''||v===null) return true; var s=String(v).toLowerCase(); return s!=='no'&&s!=='false'&&v!==false; }
@@ -471,13 +500,15 @@ function renderQuestions(){
     var qText=document.createElement('div'); qText.className='q-text';
     qText.innerHTML='<span class="q-num">'+(idx+1)+'</span><span>'+escapeHTML(q.Question)+'</span>';
     card.appendChild(qText);
-    var scale=document.createElement('div'); scale.className='scale';
-    scaleOptions.forEach(function(opt){
-      var btn=document.createElement('div'); btn.className='scale-btn';
-      btn.innerHTML='<span class="emoji">'+opt.emoji+'</span><span class="lbl">'+opt.lbl+'</span>';
+    var opts = scaleForQuestion(q.Question);
+    var scale=document.createElement('div'); scale.className='pill-scale';
+    opts.forEach(function(opt){
+      var btn=document.createElement('div'); btn.className='pill-btn';
+      btn.style.background = pillColors[opt.v];
+      btn.innerHTML='<span class="pill-num">'+opt.v+'</span><span class="pill-lbl">'+escapeHTML(opt.lbl)+'</span>';
       btn.addEventListener('click',function(){
         ratings[idx]=opt.v;
-        var sibs=scale.querySelectorAll('.scale-btn');
+        var sibs=scale.querySelectorAll('.pill-btn');
         for(var i=0;i<sibs.length;i++) sibs[i].classList.remove('sel');
         btn.classList.add('sel');
       });
