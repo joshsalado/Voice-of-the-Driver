@@ -83,6 +83,11 @@
   .dsp-chip-bubble{width:46px;height:46px;border-radius:50%;overflow:hidden;background:#fff;border:2px solid var(--border);}
   .dsp-chip-bubble svg{width:100%;height:100%;display:block;}
   .dsp-chip span{font-size:9px;font-weight:800;color:var(--navy);letter-spacing:.5px;}
+
+  .qtab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+  .qtab{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;background:#EBF3FA;border:1px solid var(--border);transition:all .15s;}
+  .qtab:hover{background:#D6E6F2;}
+  .qtab.on{background:var(--navy);color:#fff;font-weight:800;border-color:var(--navy);}
 </style>
 </head>
 <body>
@@ -193,6 +198,15 @@
   <text x="100" y="142.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="700" fill="#fff">Delivering Goods to Drive Change</text>
 </svg></div><span>SSLS</span></div></div>
 
+    <div class="qtab-bar" id="qtabBar">
+      <div class="qtab on" data-q="all">All Questions</div>
+      <div class="qtab" data-q="0">Q1: Carts</div>
+      <div class="qtab" data-q="1">Q2: App</div>
+      <div class="qtab" data-q="2">Q3: Navigation</div>
+      <div class="qtab" data-q="3">Q4: Safety</div>
+      <div class="qtab" data-q="4">Q5: Valued</div>
+    </div>
+
     <div class="kpis" id="kpis"></div>
 
     <div class="section">
@@ -225,6 +239,7 @@ var SHEET_URL = "https://docs.google.com/spreadsheets/d/1Xzihjkdiaad9M_pcwGLw8HE
 var SURVEY_URL = "https://joshsalado.github.io/Voice-of-the-Driver/";
 
 var currentPeriod = 'week';
+var currentQ = 'all';
 var cachedResponses = [];
 var cachedQuestions = [];
 
@@ -284,24 +299,39 @@ function render(){
   var periodTxt = currentPeriod==='week'?'This Week':(currentPeriod==='month'?'This Month':'All Time');
   document.getElementById('statusLine').textContent = 'Leadership Dashboard \u2022 ' + periodTxt + ' \u2022 ' + filtered.length + ' response' + (filtered.length!==1?'s':'');
 
-  // Overall score = avg of all rating values
+  var barColors = ['#FF9900','#37475A','#067D62','#0073BB','#8B5CF6'];
+  var numQ = cachedQuestions.length || 5;
+  var isSingle = (currentQ !== 'all');
+  var qi = isSingle ? parseInt(currentQ) : -1;
+
   var allVals = [];
-  filtered.forEach(function(r){ r.q.forEach(function(v){ if(v>0) allVals.push(v); }); });
+  if (isSingle) {
+    allVals = filtered.map(function(r){ return r.q[qi]; }).filter(function(v){ return v>0; });
+  } else {
+    filtered.forEach(function(r){ r.q.forEach(function(v){ if(v>0) allVals.push(v); }); });
+  }
   var overall = avg(allVals);
 
-  // KPIs
   var kpiHtml = '';
-  kpiHtml += '<div class="kpi ' + (allVals.length?scoreClass(overall):'') + '"><div class="lbl">Overall Score</div><div class="val" style="color:' + scoreColor(overall) + ';">' + (allVals.length?overall.toFixed(1):'--') + '</div><div class="tr" style="color:' + scoreColor(overall) + ';">' + (allVals.length?scoreLabel(overall):'') + '</div></div>';
+  var scoreLbl = isSingle ? 'Question Score' : 'Overall Score';
+  kpiHtml += '<div class="kpi ' + (allVals.length?scoreClass(overall):'') + '"><div class="lbl">' + scoreLbl + '</div><div class="val" style="color:' + scoreColor(overall) + ';">' + (allVals.length?overall.toFixed(1):'--') + '</div><div class="tr" style="color:' + scoreColor(overall) + ';">' + (allVals.length?scoreLabel(overall):'') + '</div></div>';
   kpiHtml += '<div class="kpi"><div class="lbl">Responses</div><div class="val" style="color:var(--blue);">' + filtered.length + '</div><div class="tr" style="color:var(--muted);">' + periodTxt + '</div></div>';
-  var withFb = filtered.filter(function(r){ return r.feedback && r.feedback.trim(); }).length;
-  kpiHtml += '<div class="kpi"><div class="lbl">Written Comments</div><div class="val" style="color:var(--orange);">' + withFb + '</div><div class="tr" style="color:var(--muted);">left feedback</div></div>';
+  if (isSingle) {
+    var dist=[0,0,0,0];
+    allVals.forEach(function(v){ if(v>=1&&v<=4) dist[v-1]++; });
+    var topN = allVals.length ? Math.max.apply(null, dist) : 0;
+    var topIdx = dist.indexOf(topN);
+    var topLbls = ['Poor','Fair','Good','Great'];
+    kpiHtml += '<div class="kpi"><div class="lbl">Most Common</div><div class="val" style="color:var(--orange);font-size:22px;">' + (allVals.length?topLbls[topIdx]:'--') + '</div><div class="tr" style="color:var(--muted);">' + (allVals.length?topN+' of '+allVals.length:'') + '</div></div>';
+  } else {
+    var withFb = filtered.filter(function(r){ return r.feedback && r.feedback.trim(); }).length;
+    kpiHtml += '<div class="kpi"><div class="lbl">Written Comments</div><div class="val" style="color:var(--orange);">' + withFb + '</div><div class="tr" style="color:var(--muted);">left feedback</div></div>';
+  }
   document.getElementById('kpis').innerHTML = kpiHtml;
 
-  // Question bars
-  var barColors = ['#FF9900','#37475A','#067D62','#0073BB','#8B5CF6'];
   var qBars = '';
-  var numQ = cachedQuestions.length || 3;
   for(var i=0;i<numQ;i++){
+    if (isSingle && i !== qi) continue;
     var vals = filtered.map(function(r){ return r.q[i]; }).filter(function(v){ return v>0; });
     var a = avg(vals);
     var pct = (a/4*100).toFixed(0);
@@ -332,6 +362,15 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
     t.classList.add('on');
     currentPeriod = t.getAttribute('data-period');
+    render();
+  });
+});
+
+document.querySelectorAll('.qtab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.qtab').forEach(function(x){ x.classList.remove('on'); });
+    t.classList.add('on');
+    currentQ = t.getAttribute('data-q');
     render();
   });
 });
