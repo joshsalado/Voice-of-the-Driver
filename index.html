@@ -405,8 +405,35 @@ function loadHub(){
     var items = (d.result==='ok'?d.data:[]).filter(function(x){ return isActive(x.Active) && x.Fact; });
     var el = document.getElementById('funfactSection');
     if(items.length){
-      // Pick a random active fact
-      var pick = items[Math.floor(Math.random()*items.length)];
+      // 1) If a fact is pinned to today's date, show it (guaranteed). 2) Otherwise daily rotation.
+      var now = new Date();
+      function todayKeys(dt){
+        var y=dt.getFullYear(), m=('0'+(dt.getMonth()+1)).slice(-2), d=('0'+dt.getDate()).slice(-2);
+        return [y+'-'+m+'-'+d, m+'-'+d, m+'/'+d, (dt.getMonth()+1)+'/'+dt.getDate()];
+      }
+      function normDate(v){
+        if(!v) return '';
+        // If it's an ISO timestamp from Sheets, convert to Y-M-D
+        var s = String(v).trim();
+        var dObj = new Date(s);
+        if(!isNaN(dObj.getTime()) && s.indexOf('-')>-1 && s.length>=10){
+          var y=dObj.getFullYear(), m=('0'+(dObj.getMonth()+1)).slice(-2), d=('0'+dObj.getDate()).slice(-2);
+          return y+'-'+m+'-'+d;
+        }
+        return s;
+      }
+      var keys = todayKeys(now);
+      var pinned = items.filter(function(x){ var nd=normDate(x.Date); return nd && keys.indexOf(nd)>-1; });
+      var pick;
+      if(pinned.length){
+        pick = pinned[0];
+      } else {
+        // Rotation pool = facts with no date pin
+        var pool = items.filter(function(x){ return !normDate(x.Date); });
+        if(!pool.length) pool = items;
+        var dayOfYear = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+        pick = pool[dayOfYear % pool.length];
+      }
       el.innerHTML = '<div class="info-card funfact"><div class="info-head"><i class="fa-solid fa-lightbulb"></i><h2>Fun Fact / Stat of the Day</h2></div><div class="funfact-body">'+escapeHTML(pick.Fact)+'</div></div>';
     }
   }).catch(function(){});
