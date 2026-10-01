@@ -221,7 +221,7 @@
   <text x="100" y="116" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="19" font-weight="900" fill="#2E3192" letter-spacing="1">LOGISTICS</text>
   <rect x="24" y="130" width="152" height="18" rx="3" fill="#E1451F"/>
   <text x="100" y="142.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="700" fill="#fff">Delivering Goods to Drive Change</text>
-</svg></div><span>SSLS</span></div><div class="hub-tabs" id="hubTabsStrip"><div class="hub-tab on" data-hub="info"><i class="fa-solid fa-screwdriver-wrench"></i> Information</div><div class="hub-tab" data-hub="recognition"><i class="fa-solid fa-star"></i> Recognition</div><div class="hub-tab" data-hub="funfacts"><i class="fa-solid fa-lightbulb"></i> Fun Facts</div></div></div>
+</svg></div><span>SSLS</span></div><div class="hub-tabs" id="hubTabsStrip"><div class="hub-tab" data-hub="info"><i class="fa-solid fa-screwdriver-wrench"></i> Information</div><div class="hub-tab" data-hub="recognition"><i class="fa-solid fa-star"></i> Recognition</div><div class="hub-tab" data-hub="funfacts"><i class="fa-solid fa-lightbulb"></i> Fun Facts</div></div></div>
     <div id="hubPreviewPanel" class="hub-panel"><div class="empty">Loading...</div></div>
 
     <div class="qtab-bar" id="qtabBar">
@@ -491,23 +491,44 @@ function loadHubPreview(which){
     panel.innerHTML = html;
   }
   if(hubCache[which]){ renderItems(hubCache[which]); return; }
-  panel.innerHTML = '<div class="empty">Loading...</div>';
+  panel.innerHTML = '<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading\u2026</div>';
   fetch(SCRIPT_URL + '?tab=' + tab).then(function(r){return r.json();}).then(function(d){
     hubCache[which] = (d.result==='ok') ? d.data : [];
     renderItems(hubCache[which]);
   }).catch(function(){ panel.innerHTML = '<div class="empty">Could not load ' + tab + '.</div>'; });
 }
+var activeHubTab = null;
 document.querySelectorAll('.hub-tab').forEach(function(t){
   t.addEventListener('click', function(){
+    var which = t.getAttribute('data-hub');
+    var panel = document.getElementById('hubPreviewPanel');
+    // Re-click the open tab -> close it, back to main screen
+    if (activeHubTab === which){
+      activeHubTab = null;
+      document.querySelectorAll('.hub-tab').forEach(function(x){ x.classList.remove('on'); });
+      if (panel){ panel.style.display = 'none'; panel.innerHTML = ''; }
+      return;
+    }
+    activeHubTab = which;
     document.querySelectorAll('.hub-tab').forEach(function(x){ x.classList.remove('on'); });
     t.classList.add('on');
-    loadHubPreview(t.getAttribute('data-hub'));
+    if (panel){ panel.style.display = 'block'; }
+    loadHubPreview(which);
   });
 });
 
 fetchAll(function(){ render(); });
-// Load the default hub preview tab (Information) on page load
-loadHubPreview('info');
+// Hub preview starts closed; pre-warm all 3 tabs in the background so clicks are instant
+(function(){
+  var p=document.getElementById('hubPreviewPanel'); if(p){ p.style.display='none'; p.innerHTML=''; }
+  var tabMap = { info:'Information', recognition:'Recognition', funfacts:'FunFacts' };
+  Object.keys(tabMap).forEach(function(which){
+    if(hubCache[which]) return;
+    fetch(SCRIPT_URL + '?tab=' + tabMap[which]).then(function(r){return r.json();}).then(function(d){
+      hubCache[which] = (d.result==='ok') ? d.data : [];
+    }).catch(function(){});
+  });
+})();
 setInterval(function(){ fetchAll(function(){ render(); }); }, 30000);
 </script>
 </body>
