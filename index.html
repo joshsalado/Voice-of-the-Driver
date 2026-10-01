@@ -452,18 +452,28 @@ function loadHub(){
         return s;
       }
       var keys = todayKeys(now);
+      var dayOfYear = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+      // Facts pinned to today take priority (show up to 2)
       var pinned = items.filter(function(x){ var nd=normDate(x.Date); return nd && keys.indexOf(nd)>-1; });
-      var pick;
-      if(pinned.length){
-        pick = pinned[0];
-      } else {
-        // Rotation pool = facts with no date pin
-        var pool = items.filter(function(x){ return !normDate(x.Date); });
-        if(!pool.length) pool = items;
-        var dayOfYear = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
-        pick = pool[dayOfYear % pool.length];
+      // Rotation pool = facts with no date pin (fallback to all)
+      var pool = items.filter(function(x){ return !normDate(x.Date); });
+      if(!pool.length) pool = items.slice();
+      // Build up to 2 picks: pinned first, then fill from daily rotation (no repeats)
+      var picks = [];
+      pinned.forEach(function(p){ if(picks.length<2 && picks.indexOf(p)===-1) picks.push(p); });
+      if(picks.length<2 && pool.length){
+        var i1 = dayOfYear % pool.length;
+        var cand1 = pool[i1];
+        if(picks.indexOf(cand1)===-1) picks.push(cand1);
+        if(picks.length<2 && pool.length>1){
+          var i2 = (dayOfYear + 1) % pool.length;
+          if(i2===i1) i2 = (i2+1) % pool.length;
+          var cand2 = pool[i2];
+          if(picks.indexOf(cand2)===-1) picks.push(cand2);
+        }
       }
-      el.innerHTML = '<div class="info-card funfact"><div class="info-head"><i class="fa-solid fa-lightbulb"></i><h2>Fun Fact / Stat of the Day</h2></div><div class="funfact-body">'+escapeHTML(pick.Fact)+'</div></div>';
+      var bodies = picks.map(function(p){ return '<div class="funfact-body">'+escapeHTML(p.Fact)+'</div>'; }).join('');
+      el.innerHTML = '<div class="info-card funfact"><div class="info-head"><i class="fa-solid fa-lightbulb"></i><h2>Fun Facts / Stats of the Day</h2></div>'+bodies+'</div>';
     }
   }).catch(function(){});
 }
