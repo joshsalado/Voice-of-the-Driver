@@ -105,6 +105,12 @@
   .hub-pv-item{background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--blue);}
   .hub-pv-item .hp-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;}
   .hub-pv-item .hp-msg{font-size:14px;color:var(--text);line-height:1.5;}
+
+  /* Hub tabs relocated into header strip */
+  #hubTabsStrip{margin-bottom:0;margin-left:auto;flex-wrap:nowrap;}
+  #hubTabsStrip .hub-tab{padding:9px 16px;font-size:13px;}
+  .hub-panel{margin-bottom:20px;}
+  @media(max-width:900px){ #hubTabsStrip{margin-left:0;flex-wrap:wrap;} }
 </style>
 </head>
 <body>
@@ -215,7 +221,8 @@
   <text x="100" y="116" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="19" font-weight="900" fill="#2E3192" letter-spacing="1">LOGISTICS</text>
   <rect x="24" y="130" width="152" height="18" rx="3" fill="#E1451F"/>
   <text x="100" y="142.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="700" fill="#fff">Delivering Goods to Drive Change</text>
-</svg></div><span>SSLS</span></div></div>
+</svg></div><span>SSLS</span></div><div class="hub-tabs" id="hubTabsStrip"><div class="hub-tab on" data-hub="info"><i class="fa-solid fa-screwdriver-wrench"></i> Information</div><div class="hub-tab" data-hub="recognition"><i class="fa-solid fa-star"></i> Recognition</div><div class="hub-tab" data-hub="funfacts"><i class="fa-solid fa-lightbulb"></i> Fun Facts</div></div></div>
+    <div id="hubPreviewPanel" class="hub-panel"><div class="empty">Loading...</div></div>
 
     <div class="qtab-bar" id="qtabBar">
       <div class="qtab on" data-q="all">All Questions</div>
@@ -242,18 +249,6 @@
   </div>
 
   
-    <!-- Driver Hub Preview -->
-    <div class="section">
-      <h3><i class="fa-solid fa-eye"></i> Driver Hub Preview</h3>
-      <div class="ps">See exactly what drivers see on the hub — edit these in the Google Sheet (Information, Recognition, FunFacts tabs)</div>
-      <div class="hub-tabs">
-        <div class="hub-tab on" data-hub="info"><i class="fa-solid fa-screwdriver-wrench"></i> Information</div>
-        <div class="hub-tab" data-hub="recognition"><i class="fa-solid fa-star"></i> Recognition</div>
-        <div class="hub-tab" data-hub="funfacts"><i class="fa-solid fa-lightbulb"></i> Fun Facts</div>
-      </div>
-      <div id="hubPreviewPanel"><div class="empty">Loading...</div></div>
-    </div>
-
     <!-- QR Modal -->
   <div class="overlay" id="qrOverlay" onclick="if(event.target===this)closeQR()">
     <div class="modal">
