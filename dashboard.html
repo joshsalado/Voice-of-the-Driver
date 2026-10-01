@@ -95,6 +95,16 @@
   .wk-bubble:hover{border-color:var(--orange);}
   .wk-bubble.on{background:var(--orange);border-color:var(--orange);color:var(--navy);font-weight:800;}
   .wk-bubble .wk-count{opacity:.7;font-size:10px;margin-left:2px;}
+
+  .hub-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .hub-tab{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;color:#fff;background:var(--navy);cursor:pointer;transition:all .15s;}
+  .hub-tab i{color:var(--orange);}
+  .hub-tab:hover{background:#31465C;}
+  .hub-tab.on{background:var(--orange);color:var(--navy);}
+  .hub-tab.on i{color:var(--navy);}
+  .hub-pv-item{background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--blue);}
+  .hub-pv-item .hp-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+  .hub-pv-item .hp-msg{font-size:14px;color:var(--text);line-height:1.5;}
 </style>
 </head>
 <body>
@@ -231,7 +241,20 @@
     </div>
   </div>
 
-  <!-- QR Modal -->
+  
+    <!-- Driver Hub Preview -->
+    <div class="section">
+      <h3><i class="fa-solid fa-eye"></i> Driver Hub Preview</h3>
+      <div class="ps">See exactly what drivers see on the hub — edit these in the Google Sheet (Information, Recognition, FunFacts tabs)</div>
+      <div class="hub-tabs">
+        <div class="hub-tab on" data-hub="info"><i class="fa-solid fa-screwdriver-wrench"></i> Information</div>
+        <div class="hub-tab" data-hub="recognition"><i class="fa-solid fa-star"></i> Recognition</div>
+        <div class="hub-tab" data-hub="funfacts"><i class="fa-solid fa-lightbulb"></i> Fun Facts</div>
+      </div>
+      <div id="hubPreviewPanel"><div class="empty">Loading...</div></div>
+    </div>
+
+    <!-- QR Modal -->
   <div class="overlay" id="qrOverlay" onclick="if(event.target===this)closeQR()">
     <div class="modal">
       <h3><i class="fa-solid fa-qrcode" style="color:var(--orange);"></i> Scan to Give Feedback</h3>
@@ -446,7 +469,50 @@ function closeQR(){ document.getElementById('qrOverlay').classList.remove('show'
 
 // Init
 document.getElementById('rawLink').href = SHEET_URL;
+
+// ---------- Driver Hub Preview ----------
+var hubCache = { info:null, recognition:null, funfacts:null };
+function loadHubPreview(which){
+  var panel = document.getElementById('hubPreviewPanel');
+  var tabMap = { info:'Information', recognition:'Recognition', funfacts:'FunFacts' };
+  var tab = tabMap[which];
+  function renderItems(rows){
+    var active = rows.filter(function(r){
+      var a = r.Active;
+      return (a===undefined||a===''||a===null) ? true : (String(a).toLowerCase()!=='no' && String(a).toLowerCase()!=='false');
+    });
+    if(!active.length){ panel.innerHTML = '<div class="empty">Nothing active in the ' + tab + ' tab right now.</div>'; return; }
+    var html = '';
+    active.forEach(function(r){
+      if(which==='info'){
+        html += '<div class="hub-pv-item">' + (r.Title?'<div class="hp-title">'+escapeHTML(r.Title)+'</div>':'') + (r.Message?'<div class="hp-msg">'+escapeHTML(r.Message)+'</div>':'') + '</div>';
+      } else if(which==='recognition'){
+        html += '<div class="hub-pv-item" style="border-left-color:var(--orange);">' + (r.Name?'<div class="hp-title">'+escapeHTML(r.Name)+'</div>':'') + (r.Message?'<div class="hp-msg">'+escapeHTML(r.Message)+'</div>':'') + '</div>';
+      } else {
+        var dateNote = r.Date ? ' <span style="color:var(--muted);font-size:12px;">(pinned: '+escapeHTML(String(r.Date))+')</span>' : '';
+        html += '<div class="hub-pv-item" style="border-left-color:var(--green);"><div class="hp-msg">'+escapeHTML(r.Fact||'')+dateNote+'</div></div>';
+      }
+    });
+    panel.innerHTML = html;
+  }
+  if(hubCache[which]){ renderItems(hubCache[which]); return; }
+  panel.innerHTML = '<div class="empty">Loading...</div>';
+  fetch(SCRIPT_URL + '?tab=' + tab).then(function(r){return r.json();}).then(function(d){
+    hubCache[which] = (d.result==='ok') ? d.data : [];
+    renderItems(hubCache[which]);
+  }).catch(function(){ panel.innerHTML = '<div class="empty">Could not load ' + tab + '.</div>'; });
+}
+document.querySelectorAll('.hub-tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.hub-tab').forEach(function(x){ x.classList.remove('on'); });
+    t.classList.add('on');
+    loadHubPreview(t.getAttribute('data-hub'));
+  });
+});
+
 fetchAll(function(){ render(); });
+// Load the default hub preview tab (Information) on page load
+loadHubPreview('info');
 setInterval(function(){ fetchAll(function(){ render(); }); }, 30000);
 </script>
 </body>
