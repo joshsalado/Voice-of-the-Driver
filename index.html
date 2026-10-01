@@ -417,7 +417,7 @@ function loadHub(){
     var items = (d.result==='ok'?d.data:[]).filter(function(x){ return isActive(x.Active) && (x.Message||x.Name); });
     var el = document.getElementById('recognitionSection');
     if(items.length){
-      var h = '<div class="info-card recognition"><div class="info-head"><i class="fa-solid fa-star"></i><h2>Driver Recognition</h2></div>';
+      var h = '<div class="info-card recognition"><div class="info-head"><i class="fa-solid fa-star"></i><h2>Recognition</h2></div>';
       items.forEach(function(it){
         h += '<div class="recog-item">';
         if(it.Name) h += '<div class="ri-name"><i class="fa-solid fa-trophy"></i>'+escapeHTML(it.Name)+'</div>';
